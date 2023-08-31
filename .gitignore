@@ -1,0 +1,5 @@
+# 忽略文件
+/raw_futures_info_data/说明.txt
+
+# 忽略ipynb文件
+*.ipynb
