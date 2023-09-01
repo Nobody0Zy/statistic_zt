@@ -1,17 +1,18 @@
 import glob
 import os
 import sys
+from multiprocessing import Pool
 
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
-sys.path.append(r"D:\\QUANT_GAME\\python_game\\pythonProject")
-from my_tools_packages import MyDecorator as MD
+# sys.path.append(r"D:\\QUANT_GAME\\python_game\\pythonProject")
+# from my_tools_packages import MyDecorator as MD
 
-running_time = MD.running_time
+# running_time = MD.running_time
 
-sys.path.append('E:\\python_project\\statistic_futures_zt\\common')
-# sys.path.append('E:\\python_project\\statistic_futures_zt\\raw_futures_info_data')
+sys.path.append('common')
 import config
 
 
@@ -90,7 +91,48 @@ class StatisticZt:
                         zt_data_list.append((date,exchange,symbol))
         return zt_data_list
 
+    # @running_time
+    def get_zt_data_list_single_file(self, file):
+        date = file[:10]
+        exchange = file.split('_')[1]
+        file_path = os.path.join(self.k_bars_data_folder_path, file)
+        k_bars_h5 = pd.HDFStore(file_path, 'r')
+        file_data_list = []
+        for symbol in k_bars_h5.keys():
+            if symbol in self.upper_lower_info_dict[date].keys():
+                symbol_bar_data = k_bars_h5[symbol].loc[:, 'open':'close']
+                symbol_upper_price = max(self.upper_lower_info_dict[date][symbol])
+                symbol_bar_zt_df = symbol_bar_data[symbol_bar_data == symbol_upper_price].dropna(how='all')
+                if not symbol_bar_zt_df.empty:
+                    file_data_list.append((date, exchange, symbol))
+        return file_data_list
+
+    def get_zt_data_list_multiprocessing(self,process_num):
+        file_list = os.listdir(self.k_bars_data_folder_path)
+        
+        with Pool(process_num) as p:
+            zt_data_list = list(tqdm(p.imap(self.get_zt_data_list_single_file, file_list), 
+                                     total=len(file_list), desc='get_zt_data_dict_multiprocessing'))
+
+        zt_data_total_list = sum(zt_data_list, [])
+        return zt_data_total_list
+    
+    def trans_res_list_to_dict(self, res_list):
+        res_dict = {}
+        date_list = list(set([data[0] for data in res_list]))
+        date_list.sort()
+        for date in date_list:
+            exchanges_list = [data[1] for data in res_list if data[0] == date]
+            exchange_dict = {}
+            for exchange in exchanges_list:
+                symbols_list = [data[2] for data in res_list if data[0] == date and data[1] == exchange]
+                exchange_dict[exchange] = symbols_list
+            res_dict[date] = exchange_dict
+            
 
 if __name__ == '__main__':
     statistic_zt = StatisticZt()
-    zt_data_dict = statistic_zt.get_zt_data_dict()
+    process_num = 16
+    zt_data_dict = statistic_zt.get_zt_data_list_multiprocessing(16)
+    zt_data_df = pd.DataFrame(zt_data_dict, columns=['date', 'exchange', 'symbol'])
+

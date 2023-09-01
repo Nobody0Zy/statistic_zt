@@ -2,7 +2,7 @@ import os
 
 import pandas as pd
 
-raw_data_info_folder_path = "E:\\python_project\\statistic_futures_zt\\raw_futures_info_data"
+raw_data_info_folder_path = "raw_futures_info_data"
 
 upper_lower_info_dict = pd.read_pickle(os.path.join(raw_data_info_folder_path,"upper_lower_info_dict.pkl"))
 
