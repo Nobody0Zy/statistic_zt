@@ -20,11 +20,15 @@ class ComposeDateBar:
         self.output_date_bar_folder_path = output_date_bar_folder_path
 
     def _process_file(self, file_path):
+        date = os.path.basename(file_path).split('_')[0]
         exchange = os.path.basename(file_path).split('_')[1]
         k_bars_h5 = pd.HDFStore(file_path, 'r')
         k_bars_df_day = self.compose_method(k_bars_h5)
         k_bars_h5.close()
+        k_bars_df_day.reset_index(inplace=True)
+        k_bars_df_day.drop(['index'], axis=1, inplace=True)
         k_bars_df_day.insert(0, 'exchange', exchange)
+        k_bars_df_day.insert(0, 'date', date)
         return k_bars_df_day
 
     def _get_file_paths(self) -> List[str]:
@@ -58,10 +62,9 @@ def compose_h5_df(k_bars_h5):
         if symbol != '/correct_info':
             symbol_df = k_bars_h5[symbol]
             symbol_date_df = symbol_df.resample('1D').agg(columns_dict)
-            symbol_date_df.insert(0, 'symbol',symbol)
+            symbol_date_df.insert(0, 'symbol', symbol)
             symbol_df_list.append(symbol_date_df)
     symbol_bar_data = pd.concat(symbol_df_list, axis=0)
-    symbol_bar_data.index.names = ['date']
     return symbol_bar_data
 
 
@@ -69,7 +72,7 @@ def compose_h5_df(k_bars_h5):
 def main():
     compose_method = compose_h5_df
     input_min_bar_folder_path = "E:\\python_project\\statistic_futures_zt\\raw_futures_info_data\\k_bars_data"
-    output_date_bar_folder_path = "E:\\python_project\\statistic_futures_zt\\raw_futures_info_data\\date_bar_by_compose.pkl"
+    output_date_bar_folder_path = "E:\\python_project\\statistic_futures_zt\\compose_date_bar\\date_bar_by_compose.pkl"
     compose_date_bar = ComposeDateBar(compose_method, input_min_bar_folder_path, output_date_bar_folder_path)
     process_num = 10
     compose_date_bar.multiprocessing_process_file(process_num)
