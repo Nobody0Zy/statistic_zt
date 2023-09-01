@@ -3,3 +3,6 @@
 
 # 忽略ipynb文件
 *.ipynb
+
+# 忽略文件夹
+/.idea/
